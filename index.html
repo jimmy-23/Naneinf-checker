@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Balatro Seed Naninf Scanner</title>
+<style>
+body { font-family: Arial, sans-serif; background:#111; color:#eee; padding:20px; }
+textarea { width:100%; height:250px; background:#222; color:#0f0; padding:10px; }
+button { padding:10px 20px; margin-top:10px; cursor:pointer; }
+pre { background:#1b1b1b; padding:15px; margin-top:20px; white-space:pre-wrap; }
+h2 { margin-top:30px; }
+</style>
+</head>
+<body>
+
+<h1>Balatro Naninf Seed Scanner</h1>
+
+<textarea id="input" placeholder="Paste seed dump here..."></textarea>
+<br>
+<button onclick="analyze()">Analyze</button>
+
+<pre id="output"></pre>
+
+<script>
+const CORE_JOKERS = [
+  "Blueprint","Brainstorm","Baron","Mime","DNA","Showman","Burglar"
+];
+
+const REQUIRED_VOUCHERS = {
+  "Joker Slot Engine": ["Blank", "Antimatter"],
+  "Hand Size Engine": ["Paint Brush", "Palette"],
+  "Boss Control": ["Director's Cut", "Retcon"],
+  "Hand Economy": ["Grabber", "Nacho Tong"]
+};
+
+function findAll(text, name) {
+  const regex = new RegExp(name, "gi");
+  let matches = [];
+  let lines = text.split("\n");
+
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].toLowerCase().includes(name.toLowerCase())) {
+      matches.push({ line: lines[i], ante: getAnte(lines, i) });
+    }
+  }
+  return matches;
+}
+
+function getAnte(lines, index) {
+  for (let i = index; i >= 0; i--) {
+    let m = lines[i].match(/==Ante\s*(\d+)==/i);
+    if (m) return parseInt(m[1]);
+  }
+  return null;
+}
+
+function analyze() {
+  const text = document.getElementById("input").value;
+  const lines = text.split("\n");
+  let out = "";
+
+  // CORE JOKERS
+  out += "CORE JOKERS\n===========\n\n";
+  CORE_JOKERS.forEach(j => {
+    let hits = findAll(text, j);
+    if (hits.length === 0) {
+      out += `${j}: NOT FOUND\n`;
+    } else {
+      hits.forEach(h => {
+        out += `${j}: Ante ${h.ante} | ${h.line.trim()}\n`;
+      });
+    }
+    out += "\n";
+  });
+
+  // VOUCHERS
+  out += "\nREQUIRED VOUCHERS\n=================\n\n";
+  Object.entries(REQUIRED_VOUCHERS).forEach(([group, list]) => {
+    out += group + "\n";
+    list.forEach(v => {
+      let hits = findAll(text, v);
+      if (hits.length === 0) {
+        out += `- ${v}: NOT FOUND\n`;
+      } else {
+        hits.forEach(h => {
+          out += `- ${v}: Ante ${h.ante}\n`;
+        });
+      }
+    });
+    out += "\n";
+  });
+
+  // ECTOPLASM
+  out += "\nECTOPLASM\n=========\n\n";
+  let ecto = findAll(text, "Ectoplasm");
+  if (ecto.length === 0) {
+    out += "NOT FOUND\n";
+  } else {
+    ecto.forEach(e => {
+      out += `Ante ${e.ante} | ${e.line.trim()}\n`;
+    });
+  }
+
+  // RED SEALS
+  out += "\n\nRED SEALS\n=========\n\n";
+  let red = [];
+  lines.forEach((l, i) => {
+    if (l.toLowerCase().includes("red seal")) {
+      red.push({ line: l.trim(), ante: getAnte(lines, i) });
+    }
+  });
+
+  if (red.length === 0) {
+    out += "NONE FOUND\n";
+  } else {
+    red.forEach(r => {
+      out += `Ante ${r.ante} | ${r.line}\n`;
+    });
+  }
+
+  document.getElementById("output").textContent = out;
+}
+</script>
+
+</body>
+</html>
